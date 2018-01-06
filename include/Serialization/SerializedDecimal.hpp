@@ -7,7 +7,7 @@
  * This module declares the Serialization::SerializedDecimal
  * class.
  *
- * Copyright (c) 2013-2017 by Richard Walters
+ * Copyright (c) 2013-2018 by Richard Walters
  */
 
 #include <Serialization/SerializedObject.hpp>

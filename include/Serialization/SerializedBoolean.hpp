@@ -7,7 +7,7 @@
  * This module declares the Serialization::SerializedBoolean
  * class.
  *
- * Copyright (c) 2014-2017 by Richard Walters
+ * Copyright (c) 2014-2018 by Richard Walters
  */
 
 #include <Serialization/SerializedObject.hpp>

@@ -4,7 +4,7 @@
  * This module contains the implementation of the
  * Serialization::SerializedCollection class.
  *
- * Copyright (c) 2015-2017 by Richard Walters
+ * Copyright (c) 2015-2018 by Richard Walters
  */
 
 #include <Serialization/SerializedCollection.hpp>

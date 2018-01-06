@@ -4,7 +4,7 @@
  * This module contains the implementation of the
  * Serialization::SerializedIpAddress class.
  *
- * Copyright (c) 2013-2017 by Richard Walters
+ * Copyright (c) 2013-2018 by Richard Walters
  */
 
 #include <inttypes.h>

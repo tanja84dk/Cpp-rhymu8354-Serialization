@@ -4,7 +4,7 @@
  * This module contains the implementation of the
  * Serialization::SerializedVector class.
  *
- * Copyright (c) 2014-2017 by Richard Walters
+ * Copyright (c) 2014-2018 by Richard Walters
  */
 
 #include <Serialization/SerializedUnsignedInteger.hpp>
