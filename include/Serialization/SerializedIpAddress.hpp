@@ -5,7 +5,7 @@
  * @file SerializedIpAddress.hpp
  *
  * This module declares the
- * PhoenixWays::Serialization::SerializedIpAddress class.
+ * Serialization::SerializedIpAddress class.
  *
  * Copyright (c) 2013-2016 by Richard Walters
  */
