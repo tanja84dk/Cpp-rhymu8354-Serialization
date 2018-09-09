@@ -173,7 +173,7 @@ namespace Serialization {
         size_t i = 1;
         const size_t end = rendering.length() - 1;
         while (i < end) {
-            const std::string element = SystemAbstractions::ParseElement(rendering, i, end);
+            const std::string element = SystemAbstractions::ParseComponent(rendering, i, end);
             SerializedObject obj;
             if (obj.Parse(SystemAbstractions::Trim(element))) {
                 value_.push_back(obj);

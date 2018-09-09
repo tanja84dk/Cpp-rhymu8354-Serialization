@@ -170,7 +170,7 @@ namespace Serialization {
             if (key.empty()) {
                 continue;
             }
-            const std::string element = SystemAbstractions::ParseElement(rendering, i, end);
+            const std::string element = SystemAbstractions::ParseComponent(rendering, i, end);
             SerializedObject obj;
             if (obj.Parse(SystemAbstractions::Trim(element))) {
                 collection_[key] = obj;
