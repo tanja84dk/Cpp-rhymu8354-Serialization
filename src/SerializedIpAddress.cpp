@@ -9,7 +9,7 @@
 
 #include <inttypes.h>
 #include <Serialization/SerializedIpAddress.hpp>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -31,7 +31,7 @@ namespace Serialization {
     }
 
     std::string SerializedIpAddress::Render() const {
-        return SystemAbstractions::sprintf(
+        return StringExtensions::sprintf(
             "%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8,
             (uint8_t)((value_ >> 24) & 0xFF),
             (uint8_t)((value_ >> 16) & 0xFF),
@@ -41,7 +41,7 @@ namespace Serialization {
     }
 
     bool SerializedIpAddress::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (rendering.find_first_of(" \r\n\t") != std::string::npos) {
             return false;
         }

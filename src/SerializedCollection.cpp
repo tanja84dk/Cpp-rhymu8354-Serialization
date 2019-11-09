@@ -11,7 +11,7 @@
 #include <Serialization/SerializedObject.hpp>
 #include <Serialization/SerializedString.hpp>
 #include <Serialization/SerializedUnsignedInteger.hpp>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -131,7 +131,7 @@ namespace Serialization {
             }
             rendering += "    " + serializedObject.first;
             rendering += ": ";
-            rendering += SystemAbstractions::Indent(serializedObject.second.Render(), 4);
+            rendering += StringExtensions::Indent(serializedObject.second.Render(), 4);
             first = false;
         }
         rendering += "\r\n}";
@@ -139,7 +139,7 @@ namespace Serialization {
     }
 
     bool SerializedCollection::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (
             (rendering.length() < 2)
             || (rendering[0] != '{')
@@ -158,7 +158,7 @@ namespace Serialization {
             ) {
                 ++j;
             }
-            const std::string key(SystemAbstractions::Trim(rendering.substr(i, j - i)));
+            const std::string key(StringExtensions::Trim(rendering.substr(i, j - i)));
             if (rendering[j] == ':') {
                 i = j + 1;
             } else {
@@ -170,9 +170,9 @@ namespace Serialization {
             if (key.empty()) {
                 continue;
             }
-            const std::string element = SystemAbstractions::ParseComponent(rendering, i, end);
+            const std::string element = StringExtensions::ParseComponent(rendering, i, end);
             SerializedObject obj;
-            if (obj.Parse(SystemAbstractions::Trim(element))) {
+            if (obj.Parse(StringExtensions::Trim(element))) {
                 collection_[key] = obj;
             } else {
                 return false;

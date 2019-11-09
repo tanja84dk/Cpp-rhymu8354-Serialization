@@ -10,7 +10,7 @@
 #include <Serialization/SerializedUnsignedInteger.hpp>
 #include <Serialization/SerializedUnsignedIntegerVector.hpp>
 #include <stack>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -97,7 +97,7 @@ namespace Serialization {
     }
 
     bool SerializedUnsignedIntegerVector::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (
             (rendering.length() < 2)
             || (rendering[0] != '<')
@@ -110,7 +110,7 @@ namespace Serialization {
         while (i < rendering.length() - 1) {
             size_t j = rendering.find_first_of(",>", i);
             unsigned int element = 0;
-            std::string elementRendering = SystemAbstractions::Trim(rendering.substr(i, j - i));
+            std::string elementRendering = StringExtensions::Trim(rendering.substr(i, j - i));
             if (elementRendering.find_first_of(" \r\n\t") != std::string::npos) {
                 return false;
             }

@@ -9,7 +9,7 @@
 
 #include <Serialization/SerializedUnsignedInteger.hpp>
 #include <Serialization/SerializedString.hpp>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -54,7 +54,7 @@ namespace Serialization {
     }
 
     bool SerializedString::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (
             (rendering.length() < 2)
             || (rendering[0] != '"')

@@ -8,7 +8,7 @@
  */
 
 #include <Serialization/SerializedBoolean.hpp>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -44,7 +44,7 @@ namespace Serialization {
     }
 
     bool SerializedBoolean::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (
             (rendering == "true")
             || (rendering == "True")

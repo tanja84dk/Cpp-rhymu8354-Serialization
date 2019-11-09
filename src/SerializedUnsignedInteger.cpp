@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <Serialization/SerializedUnsignedInteger.hpp>
 #include <stack>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -59,11 +59,11 @@ namespace Serialization {
     }
 
     std::string SerializedUnsignedInteger::Render() const {
-        return SystemAbstractions::sprintf("%" PRIu64, value_);
+        return StringExtensions::sprintf("%" PRIu64, value_);
     }
 
     bool SerializedUnsignedInteger::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (rendering.find_first_of(" \r\n\t") != std::string::npos) {
             return false;
         }

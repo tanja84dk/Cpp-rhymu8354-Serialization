@@ -9,7 +9,7 @@
 
 #include <Serialization/SerializedUnsignedInteger.hpp>
 #include <Serialization/SerializedVector.hpp>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 #include <SystemAbstractions/StringFile.hpp>
 
 namespace Serialization {
@@ -142,7 +142,7 @@ namespace Serialization {
                 if (!first) {
                     rendering += ",";
                 }
-                rendering += "\r\n    " + SystemAbstractions::Indent(componentRendering, 4);
+                rendering += "\r\n    " + StringExtensions::Indent(componentRendering, 4);
                 first = false;
             }
             rendering += "\r\n";
@@ -161,7 +161,7 @@ namespace Serialization {
     }
 
     bool SerializedVector::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (
             (rendering.length() < 2)
             || (rendering[0] != '[')
@@ -173,9 +173,9 @@ namespace Serialization {
         size_t i = 1;
         const size_t end = rendering.length() - 1;
         while (i < end) {
-            const std::string element = SystemAbstractions::ParseComponent(rendering, i, end);
+            const std::string element = StringExtensions::ParseComponent(rendering, i, end);
             SerializedObject obj;
-            if (obj.Parse(SystemAbstractions::Trim(element))) {
+            if (obj.Parse(StringExtensions::Trim(element))) {
                 value_.push_back(obj);
             } else {
                 return false;

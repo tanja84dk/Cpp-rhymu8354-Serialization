@@ -19,7 +19,7 @@
 #include <Serialization/SerializedUnsignedIntegerVector.hpp>
 #include <Serialization/SerializedVector.hpp>
 #include <stddef.h>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 #include <SystemAbstractions/StringFile.hpp>
 
 namespace {
@@ -299,7 +299,7 @@ namespace Serialization {
     }
 
     bool SerializedObject::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (rendering.empty()) {
             return false;
         } else if (

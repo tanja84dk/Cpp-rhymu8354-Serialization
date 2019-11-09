@@ -10,7 +10,7 @@
 #include <Serialization/SerializedInteger.hpp>
 #include <stack>
 #include <stdio.h>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -72,11 +72,11 @@ namespace Serialization {
     }
 
     std::string SerializedInteger::Render() const {
-        return SystemAbstractions::sprintf("%+d", value_);
+        return StringExtensions::sprintf("%+d", value_);
     }
 
     bool SerializedInteger::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (rendering.find_first_of(" \r\n\t") != std::string::npos) {
             return false;
         }

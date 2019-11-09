@@ -9,7 +9,7 @@
 
 #include <Serialization/SerializedDecimal.hpp>
 #include <stdio.h>
-#include <SystemAbstractions/StringExtensions.hpp>
+#include <StringExtensions/StringExtensions.hpp>
 
 namespace Serialization {
 
@@ -31,11 +31,11 @@ namespace Serialization {
     }
 
     std::string SerializedDecimal::Render() const {
-        return SystemAbstractions::sprintf("%lf", value_);
+        return StringExtensions::sprintf("%lf", value_);
     }
 
     bool SerializedDecimal::Parse(std::string rendering) {
-        rendering = SystemAbstractions::Trim(rendering);
+        rendering = StringExtensions::Trim(rendering);
         if (rendering.find_first_of(" \r\n\t") != std::string::npos) {
             return false;
         }

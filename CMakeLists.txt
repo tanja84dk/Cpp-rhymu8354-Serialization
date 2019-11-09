@@ -38,5 +38,6 @@ set_target_properties(${This} PROPERTIES
 target_include_directories(${This} PUBLIC include)
 
 target_link_libraries(${This}
+    StringExtensions
     SystemAbstractions
 )
