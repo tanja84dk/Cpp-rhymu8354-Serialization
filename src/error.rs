@@ -5,6 +5,9 @@ pub enum Error {
 
     #[error("ran out of bytes while deserializing value")]
     ValueTruncated,
+
+    #[error("cannot serialize container of unknown length")]
+    LengthRequired,
 }
 
 impl serde::ser::Error for Error {
@@ -12,7 +15,7 @@ impl serde::ser::Error for Error {
     where
         T: std::fmt::Display,
     {
-        todo!()
+        Error::Message(msg.to_string())
     }
 }
 

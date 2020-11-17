@@ -44,16 +44,16 @@ impl<'buffer> Serializer<'buffer> {
     }
 }
 
-impl<'buffer> serde::Serializer for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::Serializer for &'ser mut Serializer<'buffer> {
     type Error = Error;
     type Ok = ();
-    type SerializeMap = Self;
-    type SerializeSeq = Self;
-    type SerializeStruct = Self;
-    type SerializeStructVariant = Self;
-    type SerializeTuple = Self;
-    type SerializeTupleStruct = Self;
-    type SerializeTupleVariant = Self;
+    type SerializeMap = Compound<'ser, 'buffer>;
+    type SerializeSeq = Compound<'ser, 'buffer>;
+    type SerializeStruct = Compound<'ser, 'buffer>;
+    type SerializeStructVariant = Compound<'ser, 'buffer>;
+    type SerializeTuple = Compound<'ser, 'buffer>;
+    type SerializeTupleStruct = Compound<'ser, 'buffer>;
+    type SerializeTupleVariant = Compound<'ser, 'buffer>;
 
     fn serialize_bool(
         self,
@@ -150,7 +150,7 @@ impl<'buffer> serde::Serializer for Serializer<'buffer> {
 
     #[allow(clippy::cast_possible_truncation)]
     fn serialize_u64(
-        mut self,
+        self,
         v: u64,
     ) -> Result<Self::Ok> {
         self.serialize_usize(v as usize);
@@ -192,7 +192,7 @@ impl<'buffer> serde::Serializer for Serializer<'buffer> {
     }
 
     fn serialize_str(
-        mut self,
+        self,
         v: &str,
     ) -> Result<Self::Ok> {
         let bytes = v.as_bytes();
@@ -205,11 +205,14 @@ impl<'buffer> serde::Serializer for Serializer<'buffer> {
         self,
         v: &[u8],
     ) -> Result<Self::Ok> {
-        todo!()
+        self.serialize_usize(v.len());
+        self.buffer.extend(v);
+        Ok(())
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
-        todo!()
+        self.buffer.push(0x00);
+        Ok(())
     }
 
     fn serialize_some<T: ?Sized>(
@@ -219,112 +222,146 @@ impl<'buffer> serde::Serializer for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        self.buffer.push(0x01);
+        value.serialize(self)
     }
 
     fn serialize_unit(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 
     fn serialize_unit_struct(
         self,
-        name: &'static str,
+        _name: &'static str,
     ) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 
     fn serialize_unit_variant(
         self,
-        name: &'static str,
+        _name: &'static str,
         variant_index: u32,
-        variant: &'static str,
+        _variant: &'static str,
     ) -> Result<Self::Ok> {
-        todo!()
+        <Self as serde::Serializer>::serialize_u32(self, variant_index)
     }
 
     fn serialize_newtype_struct<T: ?Sized>(
         self,
-        name: &'static str,
+        _name: &'static str,
         value: &T,
     ) -> Result<Self::Ok>
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(self)
     }
 
     fn serialize_newtype_variant<T: ?Sized>(
         self,
-        name: &'static str,
+        _name: &'static str,
         variant_index: u32,
-        variant: &'static str,
+        _variant: &'static str,
         value: &T,
     ) -> Result<Self::Ok>
     where
         T: serde::Serialize,
     {
-        todo!()
+        self.serialize_usize(variant_index as usize);
+        value.serialize(self)
     }
 
     fn serialize_seq(
         self,
         len: Option<usize>,
     ) -> Result<Self::SerializeSeq> {
-        todo!()
+        len.map_or(Err(Error::LengthRequired), move |size| {
+            self.serialize_usize(size as usize);
+            Ok(Compound {
+                ser: self,
+            })
+        })
     }
 
     fn serialize_tuple(
         self,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeTuple> {
-        todo!()
+        Ok(Compound {
+            ser: self,
+        })
     }
 
     fn serialize_tuple_struct(
         self,
-        name: &'static str,
-        len: usize,
+        _name: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
-        todo!()
+        Ok(Compound {
+            ser: self,
+        })
     }
 
     fn serialize_tuple_variant(
         self,
-        name: &'static str,
+        _name: &'static str,
         variant_index: u32,
-        variant: &'static str,
-        len: usize,
+        _variant: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        todo!()
+        <&mut Serializer as serde::ser::Serializer>::serialize_u32(
+            self,
+            variant_index,
+        )?;
+        Ok(Compound {
+            ser: self,
+        })
     }
 
     fn serialize_map(
         self,
         len: Option<usize>,
     ) -> Result<Self::SerializeMap> {
-        todo!()
+        len.map_or(Err(Error::LengthRequired), move |size| {
+            self.serialize_usize(size as usize);
+            Ok(Compound {
+                ser: self,
+            })
+        })
     }
 
     fn serialize_struct(
         self,
-        name: &'static str,
-        len: usize,
+        _name: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeStruct> {
-        todo!()
+        Ok(Compound {
+            ser: self,
+        })
     }
 
     fn serialize_struct_variant(
         self,
-        name: &'static str,
+        _name: &'static str,
         variant_index: u32,
-        variant: &'static str,
-        len: usize,
+        _variant: &'static str,
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        todo!()
+        <&mut Serializer as serde::ser::Serializer>::serialize_u32(
+            self,
+            variant_index,
+        )?;
+        Ok(Compound {
+            ser: self,
+        })
     }
 }
 
-impl<'buffer> serde::ser::SerializeMap for Serializer<'buffer> {
+pub struct Compound<'ser, 'buffer> {
+    ser: &'ser mut Serializer<'buffer>,
+}
+
+impl<'ser, 'buffer> serde::ser::SerializeMap for Compound<'ser, 'buffer> {
     type Error = Error;
     type Ok = ();
 
@@ -335,7 +372,7 @@ impl<'buffer> serde::ser::SerializeMap for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        key.serialize(&mut *self.ser)
     }
 
     fn serialize_value<T: ?Sized>(
@@ -345,15 +382,15 @@ impl<'buffer> serde::ser::SerializeMap for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeSeq for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeSeq for Compound<'ser, 'buffer> {
     type Error = Error;
     type Ok = ();
 
@@ -364,55 +401,57 @@ impl<'buffer> serde::ser::SerializeSeq for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeStruct for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeStruct for Compound<'ser, 'buffer> {
     type Error = Error;
     type Ok = ();
 
     fn serialize_field<T: ?Sized>(
         &mut self,
-        key: &'static str,
+        _key: &'static str,
         value: &T,
     ) -> Result<()>
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeStructVariant for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeStructVariant
+    for Compound<'ser, 'buffer>
+{
     type Error = Error;
     type Ok = ();
 
     fn serialize_field<T: ?Sized>(
         &mut self,
-        key: &'static str,
+        _key: &'static str,
         value: &T,
     ) -> Result<()>
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeTuple for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeTuple for Compound<'ser, 'buffer> {
     type Error = Error;
     type Ok = ();
 
@@ -423,15 +462,17 @@ impl<'buffer> serde::ser::SerializeTuple for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeTupleStruct for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeTupleStruct
+    for Compound<'ser, 'buffer>
+{
     type Error = Error;
     type Ok = ();
 
@@ -442,15 +483,17 @@ impl<'buffer> serde::ser::SerializeTupleStruct for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
-impl<'buffer> serde::ser::SerializeTupleVariant for Serializer<'buffer> {
+impl<'ser, 'buffer> serde::ser::SerializeTupleVariant
+    for Compound<'ser, 'buffer>
+{
     type Error = Error;
     type Ok = ();
 
@@ -461,11 +504,11 @@ impl<'buffer> serde::ser::SerializeTupleVariant for Serializer<'buffer> {
     where
         T: serde::Serialize,
     {
-        todo!()
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        todo!()
+        Ok(())
     }
 }
 
@@ -474,7 +517,20 @@ where
     T: serde::Serialize,
 {
     let mut buffer = Vec::new();
-    serde::Serialize::serialize(value, Serializer::new(&mut buffer));
+    serde::Serialize::serialize(value, &mut Serializer::new(&mut buffer))?;
+    Ok(buffer)
+}
+
+fn serialize_bytes<T>(value: T) -> Result<Vec<u8>>
+where
+    T: AsRef<[u8]>,
+{
+    let mut buffer = Vec::new();
+    let mut serializer = Serializer::new(&mut buffer);
+    <&mut Serializer as serde::Serializer>::serialize_bytes(
+        &mut serializer,
+        value.as_ref(),
+    )?;
     Ok(buffer)
 }
 
@@ -693,5 +749,192 @@ mod tests {
             let serialization = serialization.unwrap();
             assert_eq!(*expected, serialization);
         }
+    }
+
+    #[test]
+    fn serialize_bytes() {
+        for (value, expected) in &[
+            (&[][..], &[0x00][..]),
+            (&[0x00_u8][..], &[0x01, 0x00][..]),
+            (&[0x12, 0x34, 0x56][..], &[0x03, 0x12, 0x34, 0x56][..]),
+        ] {
+            let serialization = super::serialize_bytes(value);
+            assert!(serialization.is_ok());
+            let serialization = serialization.unwrap();
+            assert_eq!(*expected, serialization);
+        }
+    }
+
+    #[test]
+    fn serialize_none() {
+        let serialization = serialize(&None::<()>);
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[0x00][..], serialization);
+    }
+
+    #[test]
+    fn serialize_some() {
+        let serialization = serialize(&Some(42_u8));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[0x01, 42][..], serialization);
+    }
+
+    #[test]
+    fn serialize_unit() {
+        let serialization = serialize(&());
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[][..] as &[u8], serialization);
+    }
+
+    #[test]
+    fn serialize_unit_struct() {
+        #[derive(serde::Serialize)]
+        struct UnitStruct;
+        let unit_struct = UnitStruct;
+        let serialization = serialize(&unit_struct);
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[][..] as &[u8], serialization);
+    }
+
+    #[test]
+    fn serialize_unit_variant() {
+        #[derive(serde::Serialize)]
+        enum UnitVariant {
+            A,
+            B,
+        };
+        for (value, expected) in
+            &[(UnitVariant::A, &[0x00][..]), (UnitVariant::B, &[0x01][..])]
+        {
+            let serialization = serialize(value);
+            assert!(serialization.is_ok());
+            let serialization = serialization.unwrap();
+            assert_eq!(*expected, serialization);
+        }
+    }
+
+    #[test]
+    fn serialize_newtype_struct() {
+        #[derive(serde::Serialize)]
+        struct NewTypeStruct(u8);
+        let serialization = serialize(&NewTypeStruct(42));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[42][..], serialization);
+    }
+
+    #[test]
+    fn serialize_newtype_variant() {
+        #[derive(serde::Serialize)]
+        enum NewTypeVariant {
+            _A,
+            B(u8),
+        }
+        let serialization = serialize(&NewTypeVariant::B(42));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[1, 42][..], serialization);
+    }
+
+    #[test]
+    fn serialize_seq() {
+        for (value, expected) in &[
+            (&[][..], &[0x00][..]),
+            (&['a'][..], &[1, 97][..]),
+            (&['a', 'b', 'c'][..], &[3, 97, 98, 99][..]),
+        ] {
+            let serialization = serialize(value);
+            assert!(serialization.is_ok());
+            let serialization = serialization.unwrap();
+            assert_eq!(*expected, serialization);
+        }
+    }
+
+    #[test]
+    fn serialize_tuple() {
+        let serialization = serialize(&('a', 'b'));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[97, 98][..], serialization);
+    }
+
+    #[test]
+    fn serialize_tuple_struct() {
+        #[derive(serde::Serialize)]
+        struct Coords(i32, i32, i32);
+        let serialization = serialize(&Coords(2, 4, 6));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[2, 4, 6][..], serialization);
+    }
+
+    #[test]
+    fn serialize_tuple_variant() {
+        #[derive(serde::Serialize)]
+        enum Coords {
+            _D2(i32, i32),
+            D3(i32, i32, i32),
+        }
+        let serialization = serialize(&Coords::D3(2, 4, 6));
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[1, 2, 4, 6][..], serialization);
+    }
+
+    #[test]
+    fn serialize_map() {
+        use std::iter::FromIterator;
+        let map: std::collections::HashMap<&str, u8> =
+            std::collections::HashMap::from_iter(
+                [("foo", 42), ("baz", 16)].iter().copied(),
+            );
+        let serialization = serialize(&map);
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert!(
+            serialization == &[2, 3, 102, 111, 111, 42, 3, 98, 97, 122, 16][..]
+                || serialization
+                    == &[2, 3, 98, 97, 122, 16, 3, 102, 111, 111, 42][..]
+        );
+    }
+
+    #[test]
+    fn serialize_struct() {
+        #[derive(serde::Serialize)]
+        struct Foo {
+            bar: u8,
+            baz: u8,
+        }
+        let serialization = serialize(&Foo {
+            bar: 16,
+            baz: 42,
+        });
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[16, 42][..], serialization);
+    }
+
+    #[test]
+    #[allow(clippy::blacklisted_name)]
+    fn serialize_struct_variant() {
+        #[derive(serde::Serialize)]
+        enum Foo {
+            _A,
+            B {
+                bar: u8,
+                baz: u8,
+            },
+        }
+        let serialization = serialize(&Foo::B {
+            bar: 16,
+            baz: 42,
+        });
+        assert!(serialization.is_ok());
+        let serialization = serialization.unwrap();
+        assert_eq!(&[1, 16, 42][..], serialization);
     }
 }
