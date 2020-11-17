@@ -17,6 +17,9 @@ pub enum Error {
 
     #[error("invalid UTF-8 sequence deserializing text")]
     InvalidUtf8,
+
+    #[error("cannot determine identifiers in this format")]
+    IdentifierUnknown,
 }
 
 impl serde::ser::Error for Error {

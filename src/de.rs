@@ -124,6 +124,11 @@ impl<'de> Deserializer<'de> {
         Ok(value)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
+    fn parse_usize(&mut self) -> Result<usize> {
+        Ok(self.parse_u64(None)? as usize)
+    }
+
     #[allow(clippy::cast_lossless)]
     fn parse_f32(&mut self) -> Result<f32> {
         if self.buffer.len() < 4 {
@@ -203,6 +208,16 @@ impl<'de> Deserializer<'de> {
             self.buffer = &self.buffer[len..];
             Ok(value)
         }
+    }
+
+    fn parse_option(&mut self) -> Result<Option<&mut Self>> {
+        let mut it = self.buffer.iter();
+        let next = it.next().ok_or(Error::ValueTruncated)?;
+        self.buffer = &self.buffer[1..];
+        Ok(match next {
+            0 => None,
+            _ => Some(self),
+        })
     }
 }
 
@@ -386,7 +401,10 @@ impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        match self.parse_option()? {
+            Some(deserializer) => visitor.visit_some(deserializer),
+            None => visitor.visit_none(),
+        }
     }
 
     fn deserialize_unit<V>(
@@ -396,29 +414,29 @@ impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        visitor.visit_unit()
     }
 
     fn deserialize_unit_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        visitor.visit_unit()
     }
 
     fn deserialize_newtype_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        visitor.visit_newtype_struct(self)
     }
 
     fn deserialize_seq<V>(
@@ -428,7 +446,8 @@ impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        let len = self.parse_usize()?;
+        self.deserialize_tuple(len, visitor)
     }
 
     fn deserialize_tuple<V>(
@@ -439,19 +458,47 @@ impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        struct Seq<'a, 'de> {
+            de: &'a mut Deserializer<'de>,
+            len: usize,
+        }
+
+        impl<'a, 'de> serde::de::SeqAccess<'de> for Seq<'a, 'de> {
+            type Error = Error;
+
+            fn next_element_seed<T>(
+                &mut self,
+                seed: T,
+            ) -> Result<Option<T::Value>>
+            where
+                T: serde::de::DeserializeSeed<'de>,
+            {
+                self.len
+                    .checked_sub(1)
+                    .map(|len| {
+                        self.len = len;
+                        seed.deserialize(&mut *self.de)
+                    })
+                    .transpose()
+            }
+        }
+
+        visitor.visit_seq(Seq {
+            de: self,
+            len,
+        })
     }
 
     fn deserialize_tuple_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         len: usize,
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        self.deserialize_tuple(len, visitor)
     }
 
     fn deserialize_map<V>(
@@ -461,51 +508,163 @@ impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        struct Map<'a, 'de> {
+            de: &'a mut Deserializer<'de>,
+            len: usize,
+        }
+
+        impl<'a, 'de> serde::de::MapAccess<'de> for Map<'a, 'de> {
+            type Error = Error;
+
+            fn next_key_seed<K>(
+                &mut self,
+                seed: K,
+            ) -> Result<Option<K::Value>>
+            where
+                K: serde::de::DeserializeSeed<'de>,
+            {
+                self.len
+                    .checked_sub(1)
+                    .map(|_| seed.deserialize(&mut *self.de))
+                    .transpose()
+            }
+
+            fn next_value_seed<V>(
+                &mut self,
+                seed: V,
+            ) -> Result<V::Value>
+            where
+                V: serde::de::DeserializeSeed<'de>,
+            {
+                self.len -= 1;
+                seed.deserialize(&mut *self.de)
+            }
+        }
+
+        let len = self.parse_usize()?;
+        visitor.visit_map(Map {
+            de: self,
+            len,
+        })
     }
 
     fn deserialize_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        self.deserialize_tuple(fields.len(), visitor)
     }
 
     fn deserialize_enum<V>(
         self,
-        name: &'static str,
-        variants: &'static [&'static str],
+        _name: &'static str,
+        _variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        struct Enum<'a, 'de> {
+            de: &'a mut Deserializer<'de>,
+            variant: usize,
+        }
+
+        impl<'a, 'de> serde::de::EnumAccess<'de> for Enum<'a, 'de> {
+            type Error = Error;
+            type Variant = &'a mut Deserializer<'de>;
+
+            fn variant_seed<V>(
+                self,
+                seed: V,
+            ) -> Result<(V::Value, Self::Variant)>
+            where
+                V: serde::de::DeserializeSeed<'de>,
+            {
+                Ok((
+                    seed.deserialize(
+                        serde::de::IntoDeserializer::into_deserializer(
+                            self.variant,
+                        ),
+                    )?,
+                    self.de,
+                ))
+            }
+        }
+
+        let variant = self.parse_usize()?;
+        visitor.visit_enum(Enum {
+            de: self,
+            variant,
+        })
     }
 
     fn deserialize_identifier<V>(
         self,
-        visitor: V,
+        _visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        Err(Error::IdentifierUnknown)
     }
 
     fn deserialize_ignored_any<V>(
         self,
+        _visitor: V,
+    ) -> Result<V::Value>
+    where
+        V: serde::de::Visitor<'de>,
+    {
+        Err(Error::TypeUnknown)
+    }
+}
+
+impl<'a, 'de> serde::de::VariantAccess<'de> for &'a mut Deserializer<'de> {
+    type Error = Error;
+
+    fn unit_variant(self) -> Result<()> {
+        Ok(())
+    }
+
+    fn newtype_variant_seed<T>(
+        self,
+        seed: T,
+    ) -> Result<T::Value>
+    where
+        T: serde::de::DeserializeSeed<'de>,
+    {
+        seed.deserialize(self)
+    }
+
+    fn tuple_variant<V>(
+        self,
+        len: usize,
         visitor: V,
     ) -> Result<V::Value>
     where
         V: serde::de::Visitor<'de>,
     {
-        todo!()
+        <Self as serde::Deserializer>::deserialize_tuple(self, len, visitor)
+    }
+
+    fn struct_variant<V>(
+        self,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value>
+    where
+        V: serde::de::Visitor<'de>,
+    {
+        <Self as serde::Deserializer>::deserialize_tuple(
+            self,
+            fields.len(),
+            visitor,
+        )
     }
 }
 
@@ -807,5 +966,175 @@ mod tests {
             let deserialization: std::ffi::CString = deserialization.unwrap();
             assert_eq!(*expected, deserialization);
         }
+    }
+
+    #[test]
+    fn deserialize_none() {
+        let deserialization = from_bytes(&[0x00][..]);
+        assert!(deserialization.is_ok());
+        let deserialization: Option<u8> = deserialization.unwrap();
+        assert!(deserialization.is_none());
+    }
+
+    #[test]
+    fn deserialize_some() {
+        let deserialization = from_bytes(&[0x01, 42][..]);
+        assert!(deserialization.is_ok());
+        let deserialization: Option<u8> = deserialization.unwrap();
+        assert!(matches!(deserialization, Some(42_u8)));
+    }
+
+    #[test]
+    fn deserialize_unit() {
+        let deserialization: Result<()> = from_bytes(&[][..] as &[u8]);
+        assert!(deserialization.is_ok());
+    }
+
+    #[test]
+    fn deserialize_unit_struct() {
+        #[derive(serde::Deserialize)]
+        struct UnitStruct;
+        let deserialization: Result<UnitStruct> = from_bytes(&[][..] as &[u8]);
+        assert!(deserialization.is_ok());
+    }
+
+    #[test]
+    fn deserialize_newtype_struct() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct NewTypeStruct(u8);
+        let deserialization: Result<NewTypeStruct> = from_bytes(&[42][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(NewTypeStruct(42), deserialization);
+    }
+
+    #[test]
+    fn deserialize_seq() {
+        for (expected, value) in &[
+            (&[][..], &[0x00][..]),
+            (&['a'][..], &[1, 97][..]),
+            (&['a', 'b', 'c'][..], &[3, 97, 98, 99][..]),
+        ] {
+            let deserialization = from_bytes(value);
+            assert!(deserialization.is_ok());
+            let deserialization: Vec<char> = deserialization.unwrap();
+            assert_eq!(*expected, deserialization);
+        }
+    }
+
+    #[test]
+    fn deserialize_tuple() {
+        let deserialization = from_bytes(&[97, 98][..]);
+        assert!(deserialization.is_ok());
+        let deserialization: (char, char) = deserialization.unwrap();
+        assert_eq!(('a', 'b'), deserialization);
+    }
+
+    #[test]
+    fn deserialize_tuple_struct() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct Coords(i32, i32, i32);
+        let deserialization = from_bytes(&[2, 4, 6][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(Coords(2, 4, 6), deserialization);
+    }
+
+    #[test]
+    fn deserialize_map() {
+        use std::iter::FromIterator;
+        let map: std::collections::HashMap<&str, u8> =
+            std::collections::HashMap::from_iter(
+                [("foo", 42), ("baz", 16)].iter().copied(),
+            );
+        let deserialization =
+            from_bytes(&[2, 3, 102, 111, 111, 42, 3, 98, 97, 122, 16][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(map, deserialization);
+    }
+
+    #[test]
+    fn deserialize_struct() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct Foo {
+            bar: u8,
+            baz: u8,
+        }
+        let deserialization = from_bytes(&[16, 42][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(
+            Foo {
+                bar: 16,
+                baz: 42,
+            },
+            deserialization
+        );
+    }
+
+    #[test]
+    fn deserialize_unit_variant() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        enum UnitVariant {
+            A,
+            B,
+        };
+        for (expected, value) in
+            &[(UnitVariant::A, &[0x00][..]), (UnitVariant::B, &[0x01][..])]
+        {
+            let deserialization = from_bytes(value);
+            assert!(deserialization.is_ok());
+            let deserialization = deserialization.unwrap();
+            assert_eq!(*expected, deserialization);
+        }
+    }
+
+    #[test]
+    fn deserialize_newtype_variant() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        enum NewTypeVariant {
+            _A,
+            B(u8),
+        }
+        let deserialization = from_bytes(&[1, 42][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(NewTypeVariant::B(42), deserialization);
+    }
+
+    #[test]
+    fn deserialize_tuple_variant() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        enum Coords {
+            _D2(i32, i32),
+            D3(i32, i32, i32),
+        }
+        let deserialization = from_bytes(&[1, 2, 4, 6][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(Coords::D3(2, 4, 6), deserialization);
+    }
+
+    #[test]
+    fn deserialize_struct_variant() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        enum Foo {
+            _A,
+            B {
+                bar: u8,
+                baz: u8,
+            },
+        }
+        let deserialization = from_bytes(&[1, 16, 42][..]);
+        assert!(deserialization.is_ok());
+        let deserialization = deserialization.unwrap();
+        assert_eq!(
+            Foo::B {
+                bar: 16,
+                baz: 42,
+            },
+            deserialization
+        );
     }
 }
