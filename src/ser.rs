@@ -3,6 +3,11 @@ use super::{
     Result,
 };
 
+/// This type implements [`serde::Serializer`] in order to encode data
+/// into a sequence of bytes.
+///
+/// [`serde::Serializer`]:
+/// https://docs.rs/serde/1.0/serde/trait.Serializer.html
 pub struct Serializer<'ser> {
     buffer: &'ser mut Vec<u8>,
 }
@@ -488,6 +493,14 @@ impl<'a, 'ser> serde::ser::SerializeTupleVariant for &'a mut Serializer<'ser> {
     }
 }
 
+/// This function is used to encode a value into a sequence of bytes
+/// using the serializer implemented by this crate.
+///
+/// # Errors
+///
+/// As with any `serde` serializer, this function may return an error
+/// if the value being serialized is in a bad state, such as for example
+/// if it contains a mutex which is locked by a thread which has panicked.
 pub fn to_bytes<T>(value: &T) -> Result<Vec<u8>>
 where
     T: serde::Serialize,

@@ -3,6 +3,11 @@ use super::{
     Result,
 };
 
+/// This type implements [`serde::Deserializer`] in order to decode data
+/// from a sequence of bytes.
+///
+/// [`serde::Deserializer`]:
+/// https://docs.rs/serde/1.0/serde/trait.Deserializer.html
 pub struct Deserializer<'de> {
     buffer: &'de [u8],
 }
@@ -221,6 +226,7 @@ impl<'de> Deserializer<'de> {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
 impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
@@ -668,6 +674,17 @@ impl<'a, 'de> serde::de::VariantAccess<'de> for &'a mut Deserializer<'de> {
     }
 }
 
+/// This function is used to decode a value from a sequence of bytes
+/// using the deserializer implemented by this crate.
+///
+/// # Errors
+///
+/// As with any `serde` deserializer, this function may return several
+/// kinds of errors, for reasons such as:
+/// * Running out of input bytes while still deserializing the data
+/// * Encountering corrupted input
+/// * Attempting to use a feature not supported by this deserializer, such as
+///   unbounded sequences
 pub fn from_bytes<'de, T>(bytes: &'de [u8]) -> Result<T>
 where
     T: serde::Deserialize<'de>,
