@@ -541,6 +541,8 @@ mod tests {
             (-4000_i16, &[0xDF, 0x20][..]),
             (9001_i16, &[0x80, 0xC6, 0x29][..]),
             (-9001_i16, &[0xC0, 0xC6, 0x29][..]),
+            (32767_i16, &[0x81, 0xFF, 0x7F][..]),
+            (-32768_i16, &[0xC2, 0x80, 0x00][..]),
         ] {
             let serialization = to_bytes(value);
             assert!(serialization.is_ok());

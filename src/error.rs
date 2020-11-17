@@ -8,9 +8,27 @@ pub enum Error {
 
     #[error("cannot serialize container of unknown length")]
     LengthRequired,
+
+    #[error("cannot deserialize without knowing type")]
+    TypeUnknown,
+
+    #[error("deserialized integer does not fit in its type")]
+    IntegerOverflow,
+
+    #[error("invalid UTF-8 sequence deserializing text")]
+    InvalidUtf8,
 }
 
 impl serde::ser::Error for Error {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: std::fmt::Display,
+    {
+        Error::Message(msg.to_string())
+    }
+}
+
+impl serde::de::Error for Error {
     fn custom<T>(msg: T) -> Self
     where
         T: std::fmt::Display,

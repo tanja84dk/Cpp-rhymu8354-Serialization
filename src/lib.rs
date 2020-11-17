@@ -4,11 +4,19 @@
 // TODO: Uncomment this once ready to publish.
 //#![warn(missing_docs)]
 
+mod de;
 mod error;
 mod ser;
 
+pub use de::{
+    from_bytes,
+    Deserializer,
+};
 pub use error::{
     Error,
     Result,
 };
-pub use ser::Serializer;
+pub use ser::{
+    to_bytes,
+    Serializer,
+};
