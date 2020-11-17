@@ -1,18 +1,40 @@
 # Serialization
 
-This is a library providing facilities to convert objects to and from a sequence of bytes for the purpose of storing them in files or conveying them between programs.
+This is a library providing facilities to convert objects to and from a
+sequence of bytes for the purpose of storing them in files or conveying them
+between programs.
 
-## Supported platforms / recommended toolchains
+[![Crates.io](https://img.shields.io/crates/v/serialization.svg)](https://crates.io/crates/serialization)
+[![Documentation](https://docs.rs/serialization/badge.svg)][dox]
 
-This is a portable C++11 library which depends only on the C++11 compiler and standard library, so it should be supported on almost any platform.  The following are recommended toolchains for popular platforms.
+More information about the Rust implementation of this library can be found in
+the [crate documentation][dox].
 
-* Windows -- [Visual Studio](https://www.visualstudio.com/) (Microsoft Visual C++)
+[dox]: https://docs.rs/serialization
+
+This is a multi-language library containing independent implementations
+for the following programming languages:
+
+* C++
+* Rust
+
+## Building the C++ Implementation
+
+A portable library is built which depends on the C++11 compiler, the C++
+standard library, and non-standard dependencies listed below.  It should be
+supported on almost any platform.  The following are recommended toolchains for
+popular platforms.
+
+* Windows -- [Visual Studio](https://www.visualstudio.com/) (Microsoft Visual
+  C++)
 * Linux -- clang or gcc
 * MacOS -- Xcode (clang)
 
 ## Building
 
-This library is not intended to stand alone.  It is intended to be included in a larger solution which uses [CMake](https://cmake.org/) to generate the build system and build applications which will link with the library.
+This library is not intended to stand alone.  It is intended to be included in
+a larger solution which uses [CMake](https://cmake.org/) to generate the build
+system and build applications which will link with the library.
 
 There are two distinct steps in the build process:
 
@@ -22,17 +44,18 @@ There are two distinct steps in the build process:
 ### Prerequisites
 
 * [CMake](https://cmake.org/) version 3.8 or newer
-* C++ toolchain compatible with CMake for your development platform (e.g. [Visual Studio](https://www.visualstudio.com/) on Windows)
-
-### Dependencies
-
+* C++ toolchain compatible with CMake for your development platform (e.g.
+  [Visual Studio](https://www.visualstudio.com/) on Windows)
 * [SystemAbstractions](https://github.com/rhymu8354/SystemAbstractions.git) - a
   cross-platform adapter library for system services whose APIs vary from one
   operating system to another
+* [Serialization](https://github.com/rhymu8354/Serialization.git) - a library
+  used to convert data to/from strings of bytes
 
 ### Build system generation
 
-Generate the build system using [CMake](https://cmake.org/) from the solution root.  For example:
+Generate the build system using [CMake](https://cmake.org/) from the solution
+root.  For example:
 
 ```bash
 mkdir build
