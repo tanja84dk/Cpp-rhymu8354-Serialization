@@ -3,12 +3,12 @@ use super::{
     Result,
 };
 
-pub struct Deserializer<'buffer> {
-    buffer: &'buffer [u8],
+pub struct Deserializer<'de> {
+    buffer: &'de [u8],
 }
 
-impl<'buffer> Deserializer<'buffer> {
-    fn new(buffer: &'buffer [u8]) -> Self {
+impl<'de> Deserializer<'de> {
+    fn new(buffer: &'de [u8]) -> Self {
         Self {
             buffer,
         }
@@ -181,7 +181,7 @@ impl<'buffer> Deserializer<'buffer> {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn parse_str(&mut self) -> Result<&'buffer str> {
+    fn parse_str(&mut self) -> Result<&'de str> {
         let len = self.parse_u64(None)? as usize;
         if self.buffer.len() < len {
             Err(Error::ValueTruncated)
@@ -194,7 +194,7 @@ impl<'buffer> Deserializer<'buffer> {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn parse_bytes(&mut self) -> Result<&'buffer [u8]> {
+    fn parse_bytes(&mut self) -> Result<&'de [u8]> {
         let len = self.parse_u64(None)? as usize;
         if self.buffer.len() < len {
             Err(Error::ValueTruncated)
@@ -206,9 +206,7 @@ impl<'buffer> Deserializer<'buffer> {
     }
 }
 
-impl<'de, 'buffer> serde::Deserializer<'buffer>
-    for &'de mut Deserializer<'buffer>
-{
+impl<'a, 'de> serde::Deserializer<'de> for &'a mut Deserializer<'de> {
     type Error = Error;
 
     fn deserialize_any<V>(
@@ -216,7 +214,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         _visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         Err(Error::TypeUnknown)
     }
@@ -226,7 +224,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_bool(self.parse_bool()?)
     }
@@ -236,7 +234,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_i8(self.parse_i8()?)
     }
@@ -246,7 +244,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_i16(self.parse_i16()?)
     }
@@ -256,7 +254,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_i32(self.parse_i32()?)
     }
@@ -266,7 +264,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_i64(self.parse_i64(None)?)
     }
@@ -276,7 +274,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_u8(self.parse_u8()?)
     }
@@ -286,7 +284,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_u16(self.parse_u16()?)
     }
@@ -296,7 +294,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_u32(self.parse_u32()?)
     }
@@ -306,7 +304,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_u64(self.parse_u64(None)?)
     }
@@ -316,7 +314,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_f32(self.parse_f32()?)
     }
@@ -326,7 +324,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_f64(self.parse_f64()?)
     }
@@ -336,7 +334,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_char(self.parse_char()?)
     }
@@ -346,7 +344,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_borrowed_str(self.parse_str()?)
     }
@@ -356,7 +354,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_borrowed_str(self.parse_str()?)
     }
@@ -366,7 +364,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_borrowed_bytes(self.parse_bytes()?)
     }
@@ -376,7 +374,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         visitor.visit_borrowed_bytes(self.parse_bytes()?)
     }
@@ -386,7 +384,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -396,7 +394,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -407,7 +405,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -418,7 +416,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -428,7 +426,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -439,7 +437,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -451,7 +449,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -461,7 +459,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -473,7 +471,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -485,7 +483,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -495,7 +493,7 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
@@ -505,15 +503,15 @@ impl<'de, 'buffer> serde::Deserializer<'buffer>
         visitor: V,
     ) -> Result<V::Value>
     where
-        V: serde::de::Visitor<'buffer>,
+        V: serde::de::Visitor<'de>,
     {
         todo!()
     }
 }
 
-pub fn from_bytes<'buffer, T>(bytes: &'buffer [u8]) -> Result<T>
+pub fn from_bytes<'de, T>(bytes: &'de [u8]) -> Result<T>
 where
-    T: serde::Deserialize<'buffer>,
+    T: serde::Deserialize<'de>,
 {
     let mut deserializer = Deserializer::new(bytes);
     T::deserialize(&mut deserializer)
