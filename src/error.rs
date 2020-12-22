@@ -1,3 +1,5 @@
+use std::str::Utf8Error;
+
 /// This is the enumeration of all the different kinds of errors which this
 /// crate generates.
 #[derive(Debug, thiserror::Error)]
@@ -29,7 +31,7 @@ pub enum Error {
     /// An invalid byte sequence was encountered while deserializing UTF-8
     /// encoded text.
     #[error("invalid UTF-8 sequence deserializing text")]
-    InvalidUtf8,
+    InvalidUtf8(#[source] Option<Utf8Error>),
 
     /// This serializer does not include identifiers in its format and so
     /// cannot determine them during deserialization.

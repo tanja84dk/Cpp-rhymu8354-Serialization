@@ -176,16 +176,16 @@ impl<'de> Deserializer<'de> {
             0xC0..=0xDF => 2,
             0xE0..=0xEF => 3,
             0xF0..=0xF7 => 4,
-            _ => return Err(Error::InvalidUtf8),
+            _ => return Err(Error::InvalidUtf8(None)),
         };
         if self.buffer.len() < n {
             return Err(Error::ValueTruncated);
         }
         let ch = std::str::from_utf8(&self.buffer[0..n])
-            .map_err(|_| Error::InvalidUtf8)?
+            .map_err(|source| Error::InvalidUtf8(Some(source)))?
             .chars()
             .next()
-            .ok_or(Error::InvalidUtf8)?;
+            .ok_or(Error::InvalidUtf8(None))?;
         self.buffer = &self.buffer[n..];
         Ok(ch)
     }
@@ -197,7 +197,7 @@ impl<'de> Deserializer<'de> {
             Err(Error::ValueTruncated)
         } else {
             let value = std::str::from_utf8(&self.buffer[0..len])
-                .map_err(|_| Error::InvalidUtf8)?;
+                .map_err(|source| Error::InvalidUtf8(Some(source)))?;
             self.buffer = &self.buffer[len..];
             Ok(value)
         }
@@ -901,7 +901,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_char() {
+    fn deserialize_char_good() {
         for (expected, value) in &[
             ('X', &[88][..]),
             ('£', &[0xC2, 0xA3][..]),
@@ -912,6 +912,24 @@ mod tests {
             assert!(deserialization.is_ok());
             let deserialization = deserialization.unwrap();
             assert_eq!(*expected, deserialization);
+        }
+    }
+
+    #[test]
+    fn deserialize_char_bad() {
+        for (has_source, value) in
+            &[(false, &[0xFF][..]), (true, &[0xD8, 0x00][..])]
+        {
+            let deserialization: Result<char> = from_bytes(value);
+            match deserialization {
+                Err(Error::InvalidUtf8(source)) => {
+                    assert_eq!(source.is_some(), *has_source);
+                },
+                _ => panic!(
+                    "InvalidUtf8 error expected, got {:?}",
+                    deserialization
+                ),
+            }
         }
     }
 
