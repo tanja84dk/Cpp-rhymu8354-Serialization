@@ -869,18 +869,15 @@ mod tests {
 
     #[test]
     fn serialize_map() {
-        use std::iter::FromIterator;
         let map: std::collections::HashMap<&str, u8> =
-            std::collections::HashMap::from_iter(
-                [("foo", 42), ("baz", 16)].iter().copied(),
-            );
+            [("foo", 42), ("baz", 16)].iter().copied().collect();
         let serialization = to_bytes(&map);
         assert!(serialization.is_ok());
         let serialization = serialization.unwrap();
         assert!(
-            serialization == &[2, 3, 102, 111, 111, 42, 3, 98, 97, 122, 16][..]
+            serialization == [2, 3, 102, 111, 111, 42, 3, 98, 97, 122, 16][..]
                 || serialization
-                    == &[2, 3, 98, 97, 122, 16, 3, 102, 111, 111, 42][..]
+                    == [2, 3, 98, 97, 122, 16, 3, 102, 111, 111, 42][..]
         );
     }
 

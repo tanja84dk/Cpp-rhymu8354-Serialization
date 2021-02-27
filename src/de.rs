@@ -1077,11 +1077,8 @@ mod tests {
 
     #[test]
     fn deserialize_map() {
-        use std::iter::FromIterator;
         let map: std::collections::HashMap<&str, u8> =
-            std::collections::HashMap::from_iter(
-                [("foo", 42), ("baz", 16)].iter().copied(),
-            );
+            [("foo", 42), ("baz", 16)].iter().copied().collect();
         let deserialization =
             from_bytes(&[2, 3, 102, 111, 111, 42, 3, 98, 97, 122, 16][..]);
         assert!(deserialization.is_ok());
