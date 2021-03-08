@@ -15,7 +15,7 @@ pub enum Error {
     #[error("ran out of bytes while deserializing value")]
     ValueTruncated,
 
-    /// This serializer does not support deserializing unbounded sequences.
+    /// This serializer does not support serializing unbounded sequences.
     #[error("cannot serialize container of unknown length")]
     LengthRequired,
 

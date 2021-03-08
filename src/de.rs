@@ -2,6 +2,7 @@ use super::{
     Error,
     Result,
 };
+use std::marker::PhantomData;
 
 /// This type implements [`serde::Deserializer`] in order to decode data
 /// from a sequence of bytes.
@@ -10,18 +11,41 @@ use super::{
 /// https://docs.rs/serde/1.0/serde/trait.Deserializer.html
 pub struct Deserializer<'de> {
     buffer: &'de [u8],
+    offset: usize,
 }
 
 impl<'de> Deserializer<'de> {
-    fn new(buffer: &'de [u8]) -> Self {
+    /// Turn the given deserializer into an iterator which deserializes
+    /// a stream of values of type `T`.
+    #[must_use]
+    pub fn iterate<T>(self) -> StreamDeserializer<'de, T> {
+        let offset = self.offset;
+        StreamDeserializer {
+            de: self,
+            offset,
+            output: PhantomData,
+        }
+    }
+
+    /// Return a new deserializer that deserializes from the given buffer.
+    #[must_use]
+    pub fn new(buffer: &'de [u8]) -> Self {
         Self {
             buffer,
+            offset: 0,
         }
+    }
+
+    /// Return the number of bytes deserialized so far by this deserializer.
+    #[must_use]
+    pub fn offset(&self) -> usize {
+        self.offset
     }
 
     fn parse_bool(&mut self) -> Result<bool> {
         self.buffer.iter().next().map_or(Err(Error::ValueTruncated), |byte| {
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
             Ok(*byte != 0)
         })
     }
@@ -30,6 +54,7 @@ impl<'de> Deserializer<'de> {
     fn parse_i8(&mut self) -> Result<i8> {
         self.buffer.iter().next().map_or(Err(Error::ValueTruncated), |byte| {
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
             Ok(*byte as i8)
         })
     }
@@ -52,12 +77,14 @@ impl<'de> Deserializer<'de> {
         let mut it = self.buffer.iter();
         let first = it.next().ok_or(Error::ValueTruncated)?;
         self.buffer = &self.buffer[1..];
+        self.offset += 1;
         let mut more = (first & 0x80) != 0;
         let negative = (first & 0x40) != 0;
         let mut value = (first & 0x3F) as i64;
         while more {
             let next = it.next().ok_or(Error::ValueTruncated)?;
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
             let lsb = next & 0x7F;
             more = (next & 0x80) != 0;
             // Special case: the negative of exactly one value, `i64::MIN`,
@@ -89,6 +116,7 @@ impl<'de> Deserializer<'de> {
     fn parse_u8(&mut self) -> Result<u8> {
         self.buffer.iter().next().map_or(Err(Error::ValueTruncated), |byte| {
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
             Ok(*byte)
         })
     }
@@ -111,11 +139,13 @@ impl<'de> Deserializer<'de> {
         let mut it = self.buffer.iter();
         let first = it.next().ok_or(Error::ValueTruncated)?;
         self.buffer = &self.buffer[1..];
+        self.offset += 1;
         let mut more = (first & 0x80) != 0;
         let mut value = (first & 0x7F) as u64;
         while more {
             let next = it.next().ok_or(Error::ValueTruncated)?;
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
             let lsb = next & 0x7F;
             more = (next & 0x80) != 0;
             value = value.checked_mul(128).ok_or(Error::IntegerOverflow)?;
@@ -144,6 +174,7 @@ impl<'de> Deserializer<'de> {
             value <<= 8;
             value += self.buffer[0] as u32;
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
         }
         unsafe {
             let value = *(&value as *const u32 as *const f32);
@@ -161,6 +192,7 @@ impl<'de> Deserializer<'de> {
             value <<= 8;
             value += self.buffer[0] as u64;
             self.buffer = &self.buffer[1..];
+            self.offset += 1;
         }
         unsafe {
             let value = *(&value as *const u64 as *const f64);
@@ -187,6 +219,7 @@ impl<'de> Deserializer<'de> {
             .next()
             .ok_or(Error::InvalidUtf8(None))?;
         self.buffer = &self.buffer[n..];
+        self.offset += n;
         Ok(ch)
     }
 
@@ -199,6 +232,7 @@ impl<'de> Deserializer<'de> {
             let value = std::str::from_utf8(&self.buffer[0..len])
                 .map_err(|source| Error::InvalidUtf8(Some(source)))?;
             self.buffer = &self.buffer[len..];
+            self.offset += len;
             Ok(value)
         }
     }
@@ -211,6 +245,7 @@ impl<'de> Deserializer<'de> {
         } else {
             let value = &self.buffer[0..len];
             self.buffer = &self.buffer[len..];
+            self.offset += len;
             Ok(value)
         }
     }
@@ -219,6 +254,7 @@ impl<'de> Deserializer<'de> {
         let mut it = self.buffer.iter();
         let next = it.next().ok_or(Error::ValueTruncated)?;
         self.buffer = &self.buffer[1..];
+        self.offset += 1;
         Ok(match next {
             0 => None,
             _ => Some(self),
@@ -671,6 +707,37 @@ impl<'a, 'de> serde::de::VariantAccess<'de> for &'a mut Deserializer<'de> {
             fields.len(),
             visitor,
         )
+    }
+}
+
+pub struct StreamDeserializer<'de, T> {
+    de: Deserializer<'de>,
+    offset: usize,
+    output: PhantomData<T>,
+}
+
+impl<'de, T> StreamDeserializer<'de, T> {
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+}
+
+impl<'de, T> Iterator for StreamDeserializer<'de, T>
+where
+    T: serde::Deserialize<'de>,
+{
+    type Item = Result<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.de.buffer.is_empty() {
+            None
+        } else {
+            let next = T::deserialize(&mut self.de);
+            if next.is_ok() {
+                self.offset = self.de.offset();
+            }
+            Some(next)
+        }
     }
 }
 
@@ -1168,5 +1235,29 @@ mod tests {
             },
             deserialization
         );
+    }
+
+    #[test]
+    fn deserialize_iterate_complete() {
+        let mut deserializer =
+            Deserializer::new(&[1, 0x81, 0x7F, 3][..]).iterate();
+        assert_eq!(0, deserializer.offset());
+        assert_eq!(1, deserializer.next().unwrap().unwrap());
+        assert_eq!(1, deserializer.offset());
+        assert_eq!(255, deserializer.next().unwrap().unwrap());
+        assert_eq!(3, deserializer.offset());
+        assert_eq!(3, deserializer.next().unwrap().unwrap());
+        assert_eq!(4, deserializer.offset());
+        assert!(deserializer.next().is_none());
+    }
+
+    #[test]
+    fn deserialize_iterate_incomplete() {
+        let mut deserializer = Deserializer::new(&[1, 0x81][..]).iterate();
+        assert_eq!(0, deserializer.offset());
+        assert_eq!(1, deserializer.next().unwrap().unwrap());
+        assert_eq!(1, deserializer.offset());
+        assert!(deserializer.next().unwrap().is_err());
+        assert_eq!(1, deserializer.offset());
     }
 }
