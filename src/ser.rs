@@ -167,7 +167,7 @@ impl<'a, 'ser> serde::Serializer for &'a mut Serializer<'ser> {
         self,
         v: f32,
     ) -> Result<Self::Ok> {
-        let v = unsafe { *(&v as *const f32 as *const u32) };
+        let v = unsafe { *(&v as *const f32).cast::<u32>() };
         for i in (0..4).rev() {
             self.buffer.push(((v >> (i * 8)) & 0xFF) as u8);
         }
@@ -179,7 +179,7 @@ impl<'a, 'ser> serde::Serializer for &'a mut Serializer<'ser> {
         self,
         v: f64,
     ) -> Result<Self::Ok> {
-        let v = unsafe { *(&v as *const f64 as *const u64) };
+        let v = unsafe { *(&v as *const f64).cast::<u64>() };
         for i in (0..8).rev() {
             self.buffer.push(((v >> (i * 8)) & 0xFF) as u8);
         }
@@ -788,7 +788,7 @@ mod tests {
         enum UnitVariant {
             A,
             B,
-        };
+        }
         for (value, expected) in
             &[(UnitVariant::A, &[0x00][..]), (UnitVariant::B, &[0x01][..])]
         {

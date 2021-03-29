@@ -177,7 +177,7 @@ impl<'de> Deserializer<'de> {
             self.offset += 1;
         }
         unsafe {
-            let value = *(&value as *const u32 as *const f32);
+            let value = *(&value as *const u32).cast::<f32>();
             Ok(value)
         }
     }
@@ -195,7 +195,7 @@ impl<'de> Deserializer<'de> {
             self.offset += 1;
         }
         unsafe {
-            let value = *(&value as *const u64 as *const f64);
+            let value = *(&value as *const u64).cast::<f64>();
             Ok(value)
         }
     }
@@ -1178,7 +1178,7 @@ mod tests {
         enum UnitVariant {
             A,
             B,
-        };
+        }
         for (expected, value) in
             &[(UnitVariant::A, &[0x00][..]), (UnitVariant::B, &[0x01][..])]
         {
