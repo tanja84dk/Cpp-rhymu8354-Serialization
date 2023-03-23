@@ -1,3 +1,11 @@
 /target
 Cargo.lock
 Thumbs.db
+[Bb]uild/
+[Oo]ut/
+*.bak
+*.tmp
+*.sh
+.vscode/
+.vs/
+Makefile

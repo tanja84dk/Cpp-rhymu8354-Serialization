@@ -1,5 +1,17 @@
+# CMakeLists.txt for Serialization
+# Original © 2018 by Richard Walters https://github.com/tanja84dk/Cpp-rhymu8354-Utf8
+# Recreated and updated 2022 by Tanja84dk
+# © 2023 by Tanja84dk
+
 cmake_minimum_required(VERSION 3.8)
-set(This Serialization)
+project(Serialization)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+#include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Tanja84dkWarnings.cmake)
+
+find_package(CPM REQUIRED)
+find_package(Cpp-rhymu8354-StringExtensions REQUIRED)
+find_package(Cpp-rhymu8354-SystemAbstractions REQUIRED)
 
 set(Headers
     include/Serialization/ISerializedObject.hpp
@@ -30,14 +42,41 @@ set(Sources
     src/SerializedVector.cpp
 )
 
-add_library(${This} STATIC ${Sources} ${Headers})
-set_target_properties(${This} PROPERTIES
+set(${PROJECT_NAME}_Libraries
+    rhymu8354::StringExtensions
+    rhymu8354::SystemAbstractions
+)
+
+add_library(${PROJECT_NAME} STATIC ${Sources} ${Headers})
+
+add_library(libs::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_library(rhymu8354::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+target_link_libraries(${PROJECT_NAME} ${Serialization_Libraries})
+
+target_include_directories(${PROJECT_NAME}
+	PUBLIC
+		$<INSTALL_INTERFACE:include>
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_compile_features(${PROJECT_NAME}
+	PRIVATE
+		cxx_std_14
+)
+
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+	VERSION ${PROJECT_VERSION}
+	SOVERSION ${PROJECT_VERSION_MAJOR}
     FOLDER Libraries
 )
 
-target_include_directories(${This} PUBLIC include)
-
-target_link_libraries(${This}
-    StringExtensions
-    SystemAbstractions
-)
+if(BUILD_TESTING)
+	add_subdirectory(test)
+endif()
